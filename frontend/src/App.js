@@ -86,7 +86,9 @@ function App() {
   };
 
   const calculateTotal = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2);
+    // Calculate total in cents to avoid floating point precision issues
+    const totalCents = cartItems.reduce((total, item) => total + Math.round(item.price * 100) * item.quantity, 0);
+    return (totalCents / 100).toFixed(2);
   };
 
   if (loading) {

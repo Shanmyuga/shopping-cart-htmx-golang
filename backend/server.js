@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const { Product, CartItem } = require('./models');
 
 const app = express();
@@ -10,13 +11,22 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Rate limiting middleware
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiting to all API routes
+app.use('/api/', limiter);
+
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/shopping-cart';
 
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(MONGODB_URI)
 .then(() => {
   console.log('Connected to MongoDB');
   initializeProducts();
@@ -179,14 +189,16 @@ app.delete('/api/cart/:id', async (req, res) => {
 app.post('/api/checkout', async (req, res) => {
   try {
     const cartItems = await CartItem.find();
-    const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Calculate total in cents to avoid floating point precision issues
+    const totalCents = cartItems.reduce((sum, item) => sum + Math.round(item.price * 100) * item.quantity, 0);
+    const total = (totalCents / 100).toFixed(2);
     
     // Clear the cart
     await CartItem.deleteMany({});
     
     res.json({ 
       message: 'Order placed successfully!', 
-      total: total.toFixed(2),
+      total: total,
       itemCount: cartItems.length
     });
   } catch (error) {
