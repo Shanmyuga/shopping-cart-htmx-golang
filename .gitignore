@@ -1,0 +1,20 @@
+# Ignore Go build artifacts
+*.exe
+*.test
+*.out
+
+# Dependency directories
+vendor/
+
+data/
+*.db
+
+# Logs
+*.log
+
+# Node.js
+node_modules/
+
+# OS-generated
+.DS_Store
+Thumbs.db
